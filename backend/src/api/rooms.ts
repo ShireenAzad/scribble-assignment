@@ -8,8 +8,10 @@ import {
 } from "./schemas.js";
 import {
   createRoom,
+  endRound,
   getRoom,
   joinRoom,
+  restartGame,
   startGame,
   submitGuess,
   toRoomSnapshot,
@@ -154,6 +156,60 @@ export function createRoomsRouter() {
       });
     } catch (error) {
       if (error instanceof Error && error.message.includes("Drawers cannot submit guesses")) {
+        next(new HttpError(403, error.message));
+        return;
+      }
+      next(error);
+    }
+  });
+
+  router.post("/:code/end", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = roomViewerQuerySchema.parse(request.query);
+
+      if (!participantId) {
+        throw new HttpError(400, "Participant ID is required");
+      }
+
+      const room = endRound(code.toUpperCase(), participantId);
+
+      if (!room) {
+        throw new HttpError(404, "Room not found");
+      }
+
+      response.json({
+        room: toRoomSnapshot(room, participantId)
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Only the host")) {
+        next(new HttpError(403, error.message));
+        return;
+      }
+      next(error);
+    }
+  });
+
+  router.post("/:code/restart", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = roomViewerQuerySchema.parse(request.query);
+
+      if (!participantId) {
+        throw new HttpError(400, "Participant ID is required");
+      }
+
+      const room = restartGame(code.toUpperCase(), participantId);
+
+      if (!room) {
+        throw new HttpError(404, "Room not found");
+      }
+
+      response.json({
+        room: toRoomSnapshot(room, participantId)
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Only the host")) {
         next(new HttpError(403, error.message));
         return;
       }

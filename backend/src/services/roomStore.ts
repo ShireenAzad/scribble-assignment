@@ -172,6 +172,43 @@ export function submitGuess(code: string, participantId: string, text: string) {
   return cloneRoom(room);
 }
 
+export function endRound(code: string, participantId: string) {
+  const room = rooms.get(code);
+
+  if (!room) return null;
+  if (room.hostId !== participantId) {
+    throw new Error("Only the host can end the round");
+  }
+
+  room.status = "result";
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
+export function restartGame(code: string, participantId: string) {
+  const room = rooms.get(code);
+
+  if (!room) return null;
+  if (room.hostId !== participantId) {
+    throw new Error("Only the host can restart the game");
+  }
+
+  room.status = "lobby";
+  room.drawerId = undefined;
+  room.secretWord = undefined;
+  room.canvasData = "";
+  room.guesses = [];
+  for (const id in room.scores) {
+    room.scores[id] = 0;
+  }
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
   const isDrawer = room.drawerId === viewerParticipantId;
 

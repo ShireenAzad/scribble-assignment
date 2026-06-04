@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { GuessForm } from "../components/GuessForm";
@@ -15,6 +15,11 @@ export function GamePage() {
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
+      return;
+    }
+
+    if (room.status === "lobby") {
+      navigate("/lobby", { replace: true });
       return;
     }
 
@@ -54,15 +59,34 @@ export function GamePage() {
     }
   }
 
+  async function handleEndRound() {
+    try {
+      await roomStore.endRound();
+    } catch (e) {
+      console.error("End round failed", e);
+    }
+  }
+
+  const isHost = room.hostId === participantId;
+  const isResult = room.status === "result";
+
   return (
     <section className="panel game-page">
       <div className="game-page__header">
         <div className="game-page__header-left">
           <span className="section-kicker">
-            {isDrawer ? "You are the Drawer" : "You are a Guesser"} — Round 1
+            {isResult
+              ? "Round Over"
+              : isDrawer
+              ? "You are the Drawer"
+              : "You are a Guesser"} — Round 1
           </span>
           <h1 className="game-page__title">
-            {isDrawer ? `Draw: ${room.secretWord}` : "Guess the Word!"}
+            {isResult
+              ? `The word was: ${room.secretWord}`
+              : isDrawer
+              ? `Draw: ${room.secretWord}`
+              : "Guess the Word!"}
           </h1>
         </div>
         <RoomCodeBadge code={room.code} />
@@ -71,64 +95,69 @@ export function GamePage() {
       <div className="game-page__layout">
         <aside className="game-page__sidebar game-page__sidebar--left">
           <Scoreboard />
-          <ResultPanel />
         </aside>
 
         <div className="game-page__main">
-          <Card title="Canvas">
-            <div
-              className="canvas-placeholder"
-              onClick={handleDraw}
-              style={{
-                minHeight: "500px",
-                backgroundColor: "#ffffff",
-                border: "1px solid #e5e7eb",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#6b7280",
-                cursor: isDrawer ? "pointer" : "default"
-              }}
-            >
-              {room.canvasData === "drawn" ? (
-                <div style={{ fontSize: "2rem", color: "#3b82f6" }}>🎨 Something was drawn!</div>
-              ) : isDrawer ? (
-                "Click here to 'draw' something"
-              ) : (
-                "Watching the drawer draw..."
-              )}
-            </div>
-            {isDrawer && (
-              <div className="button-row" style={{ marginTop: "16px" }}>
-                <button className="button button--secondary" onClick={handleClear}>
-                  Clear Canvas
-                </button>
-              </div>
-            )}
-          </Card>
+          {isResult ? (
+            <ResultPanel />
+          ) : (
+            <>
+              <Card title="Canvas">
+                <div
+                  className="canvas-placeholder"
+                  onClick={handleDraw}
+                  style={{
+                    minHeight: "500px",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#6b7280",
+                    cursor: isDrawer ? "pointer" : "default"
+                  }}
+                >
+                  {room.canvasData === "drawn" ? (
+                    <div style={{ fontSize: "2rem", color: "#3b82f6" }}>🎨 Something was drawn!</div>
+                  ) : isDrawer ? (
+                    "Click here to 'draw' something"
+                  ) : (
+                    "Watching the drawer draw..."
+                  )}
+                </div>
+                {isDrawer && (
+                  <div className="button-row" style={{ marginTop: "16px" }}>
+                    <button className="button button--secondary" onClick={handleClear}>
+                      Clear Canvas
+                    </button>
+                  </div>
+                )}
+              </Card>
 
-          <Card title="Guess History">
-            {room.guesses.length === 0 ? (
-              <p>No guesses yet.</p>
-            ) : (
-              <ul className="player-list">
-                {[...room.guesses].reverse().map((guess, index) => (
-                  <li
-                    key={index}
-                    style={{
-                      borderLeft: guess.isCorrect ? "4px solid #10b981" : "4px solid #ef4444",
-                      paddingLeft: "8px"
-                    }}
-                  >
-                    <strong>{guess.playerName}:</strong> {guess.text}
-                    {guess.isCorrect && (
-                      <span style={{ color: "#059669", marginLeft: "8px" }}>(Correct!)</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+              <Card title="Guess History">
+                {room.guesses.length === 0 ? (
+                  <p>No guesses yet.</p>
+                ) : (
+                  <ul className="player-list">
+                    {[...room.guesses].reverse().map((guess, index) => (
+                      <li
+                        key={index}
+                        style={{
+                          borderLeft: guess.isCorrect ? "4px solid #10b981" : "4px solid #ef4444",
+                          paddingLeft: "8px"
+                        }}
+                      >
+                        <strong>{guess.playerName}:</strong> {guess.text}
+                        {guess.isCorrect && (
+                          <span style={{ color: "#059669", marginLeft: "8px" }}>(Correct!)</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </>
+          )}
         </div>
 
         <aside className="game-page__sidebar game-page__sidebar--right">
@@ -145,7 +174,7 @@ export function GamePage() {
             </dl>
           </Card>
 
-          {!isDrawer && (
+          {!isDrawer && !isResult && (
             <Card title="Your Guess">
               <GuessForm />
             </Card>
@@ -157,6 +186,11 @@ export function GamePage() {
         <button className="button button--secondary" onClick={() => navigate("/lobby")}>
           Exit Game
         </button>
+        {isHost && !isResult && (
+          <button className="button button--primary" onClick={handleEndRound}>
+            End Round
+          </button>
+        )}
       </div>
     </section>
   );

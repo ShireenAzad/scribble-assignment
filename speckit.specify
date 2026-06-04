@@ -47,4 +47,19 @@
 - [ ] Polling Sync: Guesses and scores are synced to all players every 2s via existing polling.
 
 ## Scenario 4 — Result, Restart & Final Validation
-(To be specified during Scenario 4 iteration)
+
+### User Story
+**Given** a round has ended,
+**When** the result state is displayed and the host restarts,
+**Then** all players see the correct word, final scores, and full guess history; on restart, everyone returns to the lobby with players preserved and all round state cleared.
+
+### Acceptance Criteria
+- [ ] End Round: The host has an "End Round" button (for this simulation) that changes room status to `result`.
+- [ ] Result State: In `result` status, all players see:
+  - The secret word.
+  - The final scores for the round.
+  - The complete guess history.
+- [ ] Restart Game: The host has a "Restart" button in the result screen.
+- [ ] Reset Room: Clicking "Restart" changes status to `lobby` and clears `canvasData`, `guesses`, `drawerId`, and `secretWord`.
+- [ ] Participant Persistence: Participants and their basic info are preserved across restarts.
+- [ ] Final Validation: Two browser tabs can successfully join, play, see results, and restart.
