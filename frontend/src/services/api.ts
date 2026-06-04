@@ -107,5 +107,11 @@ export const api = {
       `/rooms/${encodeURIComponent(code)}/restart?participantId=${encodeURIComponent(participantId)}`,
       { method: "POST" }
     );
+  },
+  nextRound(code: string, participantId: string) {
+    return request<{ room: RoomSnapshot }>(
+      `/rooms/${encodeURIComponent(code)}/next-round?participantId=${encodeURIComponent(participantId)}`,
+      { method: "POST" }
+    );
   }
 };

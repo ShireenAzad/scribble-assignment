@@ -56,6 +56,7 @@ export function createRoom(playerName?: string) {
     status: "lobby",
     hostId: participant.id,
     participants: [participant],
+    drawerIndex: 0,
     canvasData: "",
     guesses: [],
     scores: { [participant.id]: 0 },
@@ -117,8 +118,30 @@ export function startGame(code: string, participantId: string) {
   }
 
   room.status = "playing";
-  room.drawerId = room.participants[0].id; // Host/First player is drawer
-  room.secretWord = STARTER_WORDS[0]; // Deterministic: pick first word
+  room.drawerIndex = 0;
+  room.drawerId = room.participants[room.drawerIndex].id;
+  room.secretWord = STARTER_WORDS[Math.floor(Math.random() * STARTER_WORDS.length)];
+  room.updatedAt = now();
+
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
+export function nextRound(code: string, participantId: string) {
+  const room = rooms.get(code);
+
+  if (!room) return null;
+  if (room.hostId !== participantId) {
+    throw new Error("Only the host can start the next round");
+  }
+
+  room.status = "playing";
+  room.drawerIndex = (room.drawerIndex + 1) % room.participants.length;
+  room.drawerId = room.participants[room.drawerIndex].id;
+  room.secretWord = STARTER_WORDS[Math.floor(Math.random() * STARTER_WORDS.length)];
+  room.canvasData = "";
+  room.guesses = [];
   room.updatedAt = now();
 
   rooms.set(room.code, room);
@@ -196,6 +219,7 @@ export function restartGame(code: string, participantId: string) {
   }
 
   room.status = "lobby";
+  room.drawerIndex = 0;
   room.drawerId = undefined;
   room.secretWord = undefined;
   room.canvasData = "";

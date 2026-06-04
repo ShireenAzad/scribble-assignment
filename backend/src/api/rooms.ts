@@ -11,6 +11,7 @@ import {
   endRound,
   getRoom,
   joinRoom,
+  nextRound,
   restartGame,
   startGame,
   submitGuess,
@@ -200,6 +201,33 @@ export function createRoomsRouter() {
       }
 
       const room = restartGame(code.toUpperCase(), participantId);
+
+      if (!room) {
+        throw new HttpError(404, "Room not found");
+      }
+
+      response.json({
+        room: toRoomSnapshot(room, participantId)
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Only the host")) {
+        next(new HttpError(403, error.message));
+        return;
+      }
+      next(error);
+    }
+  });
+
+  router.post("/:code/next-round", (request, response, next) => {
+    try {
+      const { code } = roomCodeParamsSchema.parse(request.params);
+      const { participantId } = roomViewerQuerySchema.parse(request.query);
+
+      if (!participantId) {
+        throw new HttpError(400, "Participant ID is required");
+      }
+
+      const room = nextRound(code.toUpperCase(), participantId);
 
       if (!room) {
         throw new HttpError(404, "Room not found");

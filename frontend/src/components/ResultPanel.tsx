@@ -17,6 +17,14 @@ export function ResultPanel() {
     }
   }
 
+  async function handleNextRound() {
+    try {
+      await roomStore.nextRound();
+    } catch (e) {
+      console.error("Next round failed", e);
+    }
+  }
+
   return (
     <div className="result-panel">
       <Card title="Final Results">
@@ -51,8 +59,19 @@ export function ResultPanel() {
 
       {isHost && (
         <div className="button-row" style={{ marginTop: "16px" }}>
-          <button className="button button--primary" disabled={isLoading} onClick={handleRestart}>
-            {isLoading ? "Restarting..." : "Restart Game"}
+          <button
+            className="button button--primary"
+            disabled={isLoading}
+            onClick={handleNextRound}
+          >
+            {isLoading ? "Starting..." : "Next Round"}
+          </button>
+          <button
+            className="button button--secondary"
+            disabled={isLoading}
+            onClick={handleRestart}
+          >
+            {isLoading ? "Restarting..." : "Back to Lobby"}
           </button>
         </div>
       )}

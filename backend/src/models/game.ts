@@ -21,6 +21,7 @@ export interface Room {
   hostId: string;
   participants: Participant[];
   drawerId?: string;
+  drawerIndex: number;
   secretWord?: string;
   canvasData: string;
   guesses: Guess[];

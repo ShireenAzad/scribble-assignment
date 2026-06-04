@@ -31,6 +31,12 @@
 - Added "Restart Game" functionality to reset the room state while preserving participants.
 - Verified all flows with comprehensive backend unit tests for each scenario.
 
+### Scenario 5: Multi-Round Enhancements
+- Implemented player turn rotation: the drawer role now rotates among all participants in subsequent rounds.
+- Added random word selection: secret words are picked randomly from the starter list for each round.
+- Added a "Next Round" flow that allows the game to continue while preserving scores.
+- Implemented a "Back to Lobby" option from the result screen for a full game reset.
+
 ## AI Usage & Workflow
 - Used a **Research -> Strategy -> Execution** workflow.
 - Leveraged `speckit` artifacts (constitution, specify, plan, tasks) to maintain alignment and traceability.
