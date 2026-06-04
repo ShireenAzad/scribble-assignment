@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { GuessForm } from "../components/GuessForm";
@@ -7,10 +7,21 @@ import { RoomCodeBadge } from "../components/RoomCodeBadge";
 import { Scoreboard } from "../components/Scoreboard";
 import { useRoomState, useRoomStore } from "../state/roomStore";
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+type Stroke = Point[];
+
 export function GamePage() {
   const navigate = useNavigate();
   const roomStore = useRoomStore();
   const { room, participantId } = useRoomState();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const currentStrokeRef = useRef<Stroke>([]);
+  const allStrokesRef = useRef<Stroke[]>([]);
 
   useEffect(() => {
     if (!room) {
@@ -34,6 +45,47 @@ export function GamePage() {
     return () => clearInterval(interval);
   }, [navigate, room, roomStore]);
 
+  // Sync canvas with room data
+  useEffect(() => {
+    if (!canvasRef.current || !room) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let strokes: Stroke[] = [];
+    try {
+      if (room.canvasData) {
+        strokes = JSON.parse(room.canvasData);
+      }
+    } catch (e) {
+      console.error("Failed to parse canvas data", e);
+    }
+
+    // Only update if strokes have changed and we're not currently drawing (to prevent flickering for drawer)
+    if (!isDrawing) {
+      drawStrokes(ctx, strokes, canvas.width, canvas.height);
+      allStrokesRef.current = strokes;
+    }
+  }, [room?.canvasData, isDrawing]);
+
+  function drawStrokes(ctx: CanvasRenderingContext2D, strokes: Stroke[], width: number, height: number) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 3;
+
+    strokes.forEach((stroke) => {
+      if (stroke.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      ctx.stroke();
+    });
+  }
+
   if (!room) {
     return null;
   }
@@ -41,17 +93,64 @@ export function GamePage() {
   const viewer = room.participants.find((participant) => participant.id === participantId) ?? null;
   const isDrawer = room.isDrawer;
 
-  async function handleDraw() {
-    if (!isDrawer) return;
-    try {
-      await roomStore.draw("drawn");
-    } catch (e) {
-      console.error("Draw failed", e);
-    }
+  function getMousePos(e: React.MouseEvent | React.TouchEvent) {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
   }
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawer) return;
+    setIsDrawing(true);
+    const pos = getMousePos(e);
+    currentStrokeRef.current = [pos];
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing || !isDrawer || !canvasRef.current) return;
+    const pos = getMousePos(e);
+    currentStrokeRef.current.push(pos);
+
+    const ctx = canvasRef.current.getContext("2d");
+    if (ctx) {
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 3;
+      const prevPos = currentStrokeRef.current[currentStrokeRef.current.length - 2];
+      ctx.beginPath();
+      ctx.moveTo(prevPos.x, prevPos.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+  };
+
+  const stopDrawing = async () => {
+    if (!isDrawing || !isDrawer) return;
+    setIsDrawing(false);
+    if (currentStrokeRef.current.length > 1) {
+      allStrokesRef.current.push(currentStrokeRef.current);
+      try {
+        await roomStore.draw(JSON.stringify(allStrokesRef.current));
+      } catch (e) {
+        console.error("Failed to save drawing", e);
+      }
+    }
+    currentStrokeRef.current = [];
+  };
 
   async function handleClear() {
     if (!isDrawer) return;
+    allStrokesRef.current = [];
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
     try {
       await roomStore.draw("");
     } catch (e) {
@@ -104,25 +203,32 @@ export function GamePage() {
             <>
               <Card title="Canvas">
                 <div
-                  className="canvas-placeholder"
-                  onClick={handleDraw}
+                  className="canvas-container"
                   style={{
                     minHeight: "500px",
                     backgroundColor: "#ffffff",
                     border: "1px solid #e5e7eb",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#6b7280",
-                    cursor: isDrawer ? "pointer" : "default"
+                    position: "relative",
+                    cursor: isDrawer ? "crosshair" : "default"
                   }}
                 >
-                  {room.canvasData === "drawn" ? (
-                    <div style={{ fontSize: "2rem", color: "#3b82f6" }}>🎨 Something was drawn!</div>
-                  ) : isDrawer ? (
-                    "Click here to 'draw' something"
-                  ) : (
-                    "Watching the drawer draw..."
+                  <canvas
+                    ref={canvasRef}
+                    width={800}
+                    height={500}
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                    style={{ width: "100%", height: "100%", display: "block" }}
+                  />
+                  {!isDrawer && room.canvasData === "" && (
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "#6b7280" }}>
+                      Waiting for the drawer to start...
+                    </div>
                   )}
                 </div>
                 {isDrawer && (
