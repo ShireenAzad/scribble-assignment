@@ -1,28 +1,30 @@
-# Tasks - Scenario 2
+# Tasks - Scenario 3
 
-## Backend - Game Start Logic
-- [x] Add `playing` to `RoomStatus` in `backend/src/models/game.ts`.
-- [x] Add `drawerId` and `secretWord` to `Room` interface.
-- [x] Add `secretWord` and `isDrawer` to `RoomSnapshot` interface.
-- [x] Implement `startGame(code: string, participantId: string)` in `backend/src/services/roomStore.ts`.
-  - [x] Validate participant is host.
-  - [x] Set status to `playing`.
-  - [x] Assign `drawerId` (first participant).
-  - [x] Select `secretWord` (deterministic).
-- [x] Update `toRoomSnapshot` to selectively include `secretWord` and set `isDrawer`.
-- [x] Add `POST /rooms/:code/start` in `backend/src/api/rooms.ts`.
+## Backend - Drawing & Guessing Logic
+- [x] Add `canvasData`, `guesses`, and `scores` to `Room` and `RoomSnapshot` in `backend/src/models/game.ts`.
+- [x] Define `Guess` interface.
+- [x] Implement `updateCanvas(code: string, participantId: string, data: string)` in `backend/src/services/roomStore.ts`.
+- [x] Implement `submitGuess(code: string, participantId: string, text: string)` in `backend/src/services/roomStore.ts`.
+  - [x] Validate guesser is NOT the drawer.
+  - [x] Compare guess case-insensitively with `secretWord`.
+  - [x] Update `guesses` history.
+  - [x] Update `scores` if correct (+100).
+- [x] Add `POST /rooms/:code/draw` and `POST /rooms/:code/guess` in `backend/src/api/rooms.ts`.
 
-## Frontend - Game Transition & Role UI
-- [x] Update `RoomSnapshot` and `api` service in `frontend/src/services/api.ts`.
-- [x] Implement `startGame` in `frontend/src/state/roomStore.ts`.
-- [x] In `LobbyPage.tsx`, detect `status === 'playing'` in the polling loop and redirect to `/game`.
-- [x] In `LobbyPage.tsx`, hook up "Start Game" button to `roomStore.startGame()`.
-- [x] Update `GamePage.tsx` to display the secret word if `room.isDrawer` is true.
-- [x] Update `GamePage.tsx` to display role-specific UI (e.g., "You are the drawer" vs "You are a guesser").
+## Frontend - Interactive Gameplay UI
+- [x] Update `api` service with `draw` and `submitGuess` methods in `frontend/src/services/api.ts`.
+- [x] Implement `draw` and `submitGuess` in `frontend/src/state/roomStore.ts`.
+- [x] In `GamePage.tsx`, update "Canvas" card to show actual `canvasData` status.
+- [x] In `GamePage.tsx`, hook up "Clear Canvas" to `roomStore.draw("")`.
+- [x] In `GamePage.tsx`, simulate drawing by clicking on the canvas area (calls `roomStore.draw("drawn")`).
+- [x] Update `Scoreboard.tsx` to display scores from `room.scores`.
+- [x] Update `GuessForm.tsx` to call `roomStore.submitGuess(text)`.
+- [x] Display guess history in `GamePage.tsx` or a separate panel.
 
 ## Validation
-- [x] Verify game starts only when host clicks "Start Game" and ≥2 players are present.
-- [x] Verify all players are redirected to `/game` via polling.
-- [x] Verify the drawer sees the secret word.
-- [x] Verify guessers do NOT see the secret word.
-- [x] Verify player names are trimmed and validated on join/create.
+- [x] Verify drawer can "draw" and clear the canvas.
+- [x] Verify guessers see updated canvas status via polling.
+- [x] Verify guessers can submit guesses.
+- [x] Verify correct guesses increase score by 100.
+- [x] Verify guess history is visible to all players.
+- [x] Verify drawer cannot submit guesses.

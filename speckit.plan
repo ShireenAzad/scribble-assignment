@@ -2,36 +2,37 @@
 
 ## Scenario 1 - Room Setup & Lobby (Complete)
 
-## Scenario 2 - Game Start & Drawer Flow
+## Scenario 3 - Gameplay Interaction
 
 ### Discovery Notes
 - **Gaps identified:**
-  - `RoomStatus` only has `lobby`. Needs `playing`.
-  - `Room` model lacks `currentWord`, `drawerId`, and `round` info.
-  - `RoomSnapshot` doesn't filter `currentWord` based on the viewer's role.
-  - No `POST /rooms/:code/start` endpoint.
+  - `Room` model needs `canvasData: string`, `guesses: Guess[]`, and `scores: Record<string, number>`.
+  - `Guess` interface: `{ playerId: string, playerName: string, text: string, isCorrect: boolean }`.
+  - No endpoints for `POST /rooms/:code/draw` or `POST /rooms/:code/guess`.
+  - `Scoreboard` and `GuessForm` need to be hooked up to the store.
 - **Assumptions:**
-  - Deterministic word selection means taking the first word for the first round.
+  - `canvasData` can be a simple string (e.g., "drawn" or empty) for this simulation.
+  - Case-insensitive comparison: `guess.toLowerCase() === secretWord.toLowerCase()`.
 
 ### State Model Changes
 #### Backend
 - `backend/src/models/game.ts`:
-  - `RoomStatus`: Add `playing`.
-  - `Room`: Add `drawerId?: string`, `secretWord?: string`.
-  - `RoomSnapshot`: Add `secretWord?: string`, `isDrawer: boolean`.
+  - `Room`: Add `canvasData: string`, `guesses: Guess[]`, `scores: Record<string, number>`.
+  - `RoomSnapshot`: Add `canvasData`, `guesses`, `scores`.
 
 ### Data Flow
-- **Start Game**: `POST /rooms/:code/start` (Host only) -> Backend sets status to `playing`, assigns `drawerId` (host), and picks `secretWord`.
-- **Sync**: All players polling `GET /rooms/:code` see status `playing` and redirect to `/game`.
-- **Word Visibility**: `toRoomSnapshot` only includes `secretWord` if `viewerParticipantId === room.drawerId`.
+- **Drawing**: `POST /rooms/:code/draw` -> Updates `canvasData`.
+- **Guessing**: `POST /rooms/:code/guess` -> Checks against `secretWord`, updates `guesses` and `scores`.
+- **Sync**: Polling `GET /rooms/:code` retrieves updated `canvasData`, `guesses`, and `scores`.
 
 ### File-level Changes
 - `backend/src/models/game.ts`: Update types.
-- `backend/src/services/roomStore.ts`: Add `startGame` function.
-- `backend/src/api/rooms.ts`: Add `POST /:code/start` route.
-- `frontend/src/pages/LobbyPage.tsx`: Redirect when status is `playing`.
-- `frontend/src/pages/GamePage.tsx`: Display word for drawer, hide for others.
+- `backend/src/services/roomStore.ts`: Add `updateCanvas` and `submitGuess` functions.
+- `backend/src/api/rooms.ts`: Add routes for drawing and guessing.
+- `frontend/src/state/roomStore.ts`: Add `draw` and `submitGuess` methods.
+- `frontend/src/pages/GamePage.tsx`: Implement drawing/clearing UI.
+- `frontend/src/components/Scoreboard.tsx`: Display scores from the room.
+- `frontend/src/components/GuessForm.tsx`: Implement guess submission.
 
 ### Risks
-- Ensuring all players redirect simultaneously (polling latency might cause slight delay).
-- Role assignment logic needs to be robust.
+- High polling frequency for "drawing" might be slow (but okay for this assignment's scope).

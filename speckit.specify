@@ -30,7 +30,21 @@
 - [ ] Game State Sync: Room status changes from `lobby` to `playing`. Polling players detect this and redirect to the game screen.
 
 ## Scenario 3 — Gameplay Interaction
-(To be specified during Scenario 3 iteration)
+
+### User Story
+**Given** a round is active with a drawer and guessers (all scores start at 0),
+**When** the drawer draws/clears the canvas and guessers submit their guesses,
+**Then** the drawing is visible on the drawer's screen; guesses are trimmed, case-insensitively compared, and empty ones rejected; the guess history is synced to all players via polling; correct guesses score 100 (incorrect add 0).
+
+### Acceptance Criteria
+- [ ] Drawing State: The drawer can "draw" (simulated by updating a `canvasData` field in the room).
+- [ ] Clear Canvas: The drawer has a "Clear Canvas" button that resets the `canvasData`.
+- [ ] Guess Submission: Guessers can submit guesses; empty or whitespace-only guesses are rejected.
+- [ ] Guess Validation: Guesses are compared case-insensitively with the `secretWord`.
+- [ ] Guess History: All guesses (correct and incorrect) are stored in the room and visible to all players via polling.
+- [ ] Scoring: A correct guess adds 100 points to the player's score.
+- [ ] Round End Condition: (Optional/Simplified) For this scenario, we just focus on the interaction. We'll handle results in Scenario 4.
+- [ ] Polling Sync: Guesses and scores are synced to all players every 2s via existing polling.
 
 ## Scenario 4 — Result, Restart & Final Validation
 (To be specified during Scenario 4 iteration)

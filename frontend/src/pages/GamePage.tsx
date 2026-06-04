@@ -1,21 +1,33 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 import { GuessForm } from "../components/GuessForm";
 import { ResultPanel } from "../components/ResultPanel";
 import { RoomCodeBadge } from "../components/RoomCodeBadge";
 import { Scoreboard } from "../components/Scoreboard";
-import { useRoomState } from "../state/roomStore";
+import { useRoomState, useRoomStore } from "../state/roomStore";
 
 export function GamePage() {
   const navigate = useNavigate();
+  const roomStore = useRoomStore();
   const { room, participantId } = useRoomState();
 
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
+      return;
     }
-  }, [navigate, room]);
+
+    const interval = setInterval(async () => {
+      try {
+        await roomStore.fetchRoom();
+      } catch (e) {
+        console.error("Polling failed", e);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [navigate, room, roomStore]);
 
   if (!room) {
     return null;
@@ -23,6 +35,24 @@ export function GamePage() {
 
   const viewer = room.participants.find((participant) => participant.id === participantId) ?? null;
   const isDrawer = room.isDrawer;
+
+  async function handleDraw() {
+    if (!isDrawer) return;
+    try {
+      await roomStore.draw("drawn");
+    } catch (e) {
+      console.error("Draw failed", e);
+    }
+  }
+
+  async function handleClear() {
+    if (!isDrawer) return;
+    try {
+      await roomStore.draw("");
+    } catch (e) {
+      console.error("Clear failed", e);
+    }
+  }
 
   return (
     <section className="panel game-page">
@@ -48,6 +78,7 @@ export function GamePage() {
           <Card title="Canvas">
             <div
               className="canvas-placeholder"
+              onClick={handleDraw}
               style={{
                 minHeight: "500px",
                 backgroundColor: "#ffffff",
@@ -55,17 +86,47 @@ export function GamePage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#6b7280"
+                color: "#6b7280",
+                cursor: isDrawer ? "pointer" : "default"
               }}
             >
-              {isDrawer
-                ? "Interactive drawing canvas (placeholder)"
-                : "Watching the drawer draw..."}
+              {room.canvasData === "drawn" ? (
+                <div style={{ fontSize: "2rem", color: "#3b82f6" }}>🎨 Something was drawn!</div>
+              ) : isDrawer ? (
+                "Click here to 'draw' something"
+              ) : (
+                "Watching the drawer draw..."
+              )}
             </div>
             {isDrawer && (
               <div className="button-row" style={{ marginTop: "16px" }}>
-                <button className="button button--secondary">Clear Canvas</button>
+                <button className="button button--secondary" onClick={handleClear}>
+                  Clear Canvas
+                </button>
               </div>
+            )}
+          </Card>
+
+          <Card title="Guess History">
+            {room.guesses.length === 0 ? (
+              <p>No guesses yet.</p>
+            ) : (
+              <ul className="player-list">
+                {[...room.guesses].reverse().map((guess, index) => (
+                  <li
+                    key={index}
+                    style={{
+                      borderLeft: guess.isCorrect ? "4px solid #10b981" : "4px solid #ef4444",
+                      paddingLeft: "8px"
+                    }}
+                  >
+                    <strong>{guess.playerName}:</strong> {guess.text}
+                    {guess.isCorrect && (
+                      <span style={{ color: "#059669", marginLeft: "8px" }}>(Correct!)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </Card>
         </div>

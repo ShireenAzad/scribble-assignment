@@ -56,6 +56,9 @@ export function createRoom(playerName?: string) {
     status: "lobby",
     hostId: participant.id,
     participants: [participant],
+    canvasData: "",
+    guesses: [],
+    scores: { [participant.id]: 0 },
     createdAt: now(),
     updatedAt: now()
   };
@@ -77,6 +80,7 @@ export function joinRoom(code: string, playerName?: string) {
 
   const participant = createParticipant(playerName);
   room.participants.push(participant);
+  room.scores[participant.id] = 0;
   room.updatedAt = now();
   rooms.set(room.code, room);
 
@@ -122,6 +126,52 @@ export function startGame(code: string, participantId: string) {
   return cloneRoom(room);
 }
 
+export function updateCanvas(code: string, participantId: string, data: string) {
+  const room = rooms.get(code);
+
+  if (!room) return null;
+  if (room.drawerId !== participantId) {
+    throw new Error("Only the drawer can update the canvas");
+  }
+
+  room.canvasData = data;
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
+export function submitGuess(code: string, participantId: string, text: string) {
+  const room = rooms.get(code);
+
+  if (!room) return null;
+  if (room.drawerId === participantId) {
+    throw new Error("Drawers cannot submit guesses");
+  }
+
+  const participant = room.participants.find((p) => p.id === participantId);
+  if (!participant) throw new Error("Participant not found");
+
+  const isCorrect = text.trim().toLowerCase() === room.secretWord?.toLowerCase();
+
+  room.guesses.push({
+    playerId: participantId,
+    playerName: participant.name,
+    text: text.trim(),
+    isCorrect,
+    timestamp: now()
+  });
+
+  if (isCorrect) {
+    room.scores[participantId] = (room.scores[participantId] || 0) + 100;
+  }
+
+  room.updatedAt = now();
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
   const isDrawer = room.drawerId === viewerParticipantId;
 
@@ -133,6 +183,9 @@ export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSn
     availableWords: listWords(),
     roles: [...STARTER_ROLES],
     secretWord: isDrawer ? room.secretWord : undefined,
-    isDrawer
+    isDrawer,
+    canvasData: room.canvasData,
+    guesses: room.guesses.map((g) => ({ ...g })),
+    scores: { ...room.scores }
   };
 }
