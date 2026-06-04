@@ -8,14 +8,28 @@ import { useRoomState, useRoomStore } from "../state/roomStore";
 export function LobbyPage() {
   const navigate = useNavigate();
   const roomStore = useRoomStore();
-  const { room, error, isLoading } = useRoomState();
+  const { room, participantId, error, isLoading } = useRoomState();
   const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const isHost = room?.hostId === participantId;
+  const canStartGame = room && room.participants.length >= 2;
 
   useEffect(() => {
     if (!room) {
       navigate("/", { replace: true });
+      return;
     }
-  }, [navigate, room]);
+
+    const interval = setInterval(async () => {
+      try {
+        await roomStore.fetchRoom();
+      } catch (e) {
+        console.error("Polling failed", e);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [navigate, room, roomStore]);
 
   async function handleRefresh() {
     try {
@@ -49,7 +63,9 @@ export function LobbyPage() {
             <ul className="player-list">
               {room.participants.map((participant) => (
                 <li key={participant.id}>
-                  <span>{participant.name}</span>
+                  <span>
+                    {participant.name} {participant.id === room.hostId && "(Host)"}
+                  </span>
                   <span className="player-list__meta">joined</span>
                 </li>
               ))}
@@ -69,9 +85,15 @@ export function LobbyPage() {
         <button className="button button--secondary" disabled={isLoading} onClick={handleRefresh}>
           {isLoading ? "Refreshing..." : "Refresh Room"}
         </button>
-        <button className="button button--primary" onClick={() => navigate("/game")}>
-          Start Game
-        </button>
+        {isHost && (
+          <button
+            className="button button--primary"
+            disabled={!canStartGame}
+            onClick={() => navigate("/game")}
+          >
+            Start Game
+          </button>
+        )}
       </div>
     </section>
   );

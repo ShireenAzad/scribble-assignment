@@ -1,0 +1,28 @@
+# Tasks - Scenario 2
+
+## Backend - Game Start Logic
+- [ ] Add `playing` to `RoomStatus` in `backend/src/models/game.ts`.
+- [ ] Add `drawerId` and `secretWord` to `Room` interface.
+- [ ] Add `secretWord` and `isDrawer` to `RoomSnapshot` interface.
+- [ ] Implement `startGame(code: string, participantId: string)` in `backend/src/services/roomStore.ts`.
+  - [ ] Validate participant is host.
+  - [ ] Set status to `playing`.
+  - [ ] Assign `drawerId` (first participant).
+  - [ ] Select `secretWord` (deterministic).
+- [ ] Update `toRoomSnapshot` to selectively include `secretWord` and set `isDrawer`.
+- [ ] Add `POST /rooms/:code/start` in `backend/src/api/rooms.ts`.
+
+## Frontend - Game Transition & Role UI
+- [ ] Update `RoomSnapshot` and `api` service in `frontend/src/services/api.ts`.
+- [ ] Implement `startGame` in `frontend/src/state/roomStore.ts`.
+- [ ] In `LobbyPage.tsx`, detect `status === 'playing'` in the polling loop and redirect to `/game`.
+- [ ] In `LobbyPage.tsx`, hook up "Start Game" button to `roomStore.startGame()`.
+- [ ] Update `GamePage.tsx` to display the secret word if `room.isDrawer` is true.
+- [ ] Update `GamePage.tsx` to display role-specific UI (e.g., "You are the drawer" vs "You are a guesser").
+
+## Validation
+- [ ] Verify game starts only when host clicks "Start Game" and ≥2 players are present.
+- [ ] Verify all players are redirected to `/game` via polling.
+- [ ] Verify the drawer sees the secret word.
+- [ ] Verify guessers do NOT see the secret word.
+- [ ] Verify player names are trimmed and validated on join/create.

@@ -1,0 +1,36 @@
+# Feature Specification
+
+## Scenario 1 — Room Setup & Lobby
+
+### User Story
+**Given** a player wants to host or join a drawing game,
+**When** they create or join a room via a unique code,
+**Then** the creator is automatically the host; invalid/empty codes are rejected with clear feedback; rooms are fully isolated; the lobby refreshes via polling (~2s); and only the host can start the game once at least 2 players are present.
+
+### Acceptance Criteria
+- [ ] Host tracking: The creator of a room is stored as the host.
+- [ ] Join validation: Empty or invalid codes return clear error messages.
+- [ ] Isolation: Players in different rooms do not see each other's data.
+- [ ] Lobby Polling: Frontend automatically refreshes the participant list every ~2 seconds.
+- [ ] Host-only Start: Only the host sees the "Start Game" button.
+- [ ] Minimum Players: "Start Game" is disabled until at least 2 players are present.
+
+## Scenario 2 — Game Start & Drawer Flow
+
+### User Story
+**Given** a game is starting and player names are trimmed (empty/whitespace-only rejected with a message),
+**When** the first round begins,
+**Then** the host (or first player) becomes the clearly-identified drawer, and the secret word (deterministically selected from the starter list) is visible only to the drawer.
+
+### Acceptance Criteria
+- [ ] Name Validation: Player names are trimmed; empty or whitespace-only names are rejected with a specific error message.
+- [ ] Drawer Assignment: When the game starts, one player (the host/first player for now) is assigned the 'drawer' role; others are 'guessers'.
+- [ ] Secret Word: A word is deterministically selected from the starter list (`rocket`, `pizza`, `castle`, `guitar`, `sunflower`).
+- [ ] Word Visibility: The secret word is only included in the `RoomSnapshot` for the drawer. Guessers receive `null` or a hidden placeholder.
+- [ ] Game State Sync: Room status changes from `lobby` to `playing`. Polling players detect this and redirect to the game screen.
+
+## Scenario 3 — Gameplay Interaction
+(To be specified during Scenario 3 iteration)
+
+## Scenario 4 — Result, Restart & Final Validation
+(To be specified during Scenario 4 iteration)

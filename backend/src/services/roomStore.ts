@@ -54,6 +54,7 @@ export function createRoom(playerName?: string) {
   const room: Room = {
     code: generateUniqueCode(),
     status: "lobby",
+    hostId: participant.id,
     participants: [participant],
     createdAt: now(),
     updatedAt: now()
@@ -96,14 +97,42 @@ export function saveRoom(room: Room) {
   return getRoom(room.code);
 }
 
+export function startGame(code: string, participantId: string) {
+  const room = rooms.get(code);
+
+  if (!room) {
+    return null;
+  }
+
+  if (room.hostId !== participantId) {
+    throw new Error("Only the host can start the game");
+  }
+
+  if (room.participants.length < 2) {
+    throw new Error("At least 2 players are required to start");
+  }
+
+  room.status = "playing";
+  room.drawerId = room.participants[0].id; // Host/First player is drawer
+  room.secretWord = STARTER_WORDS[0]; // Deterministic: pick first word
+  room.updatedAt = now();
+
+  rooms.set(room.code, room);
+
+  return cloneRoom(room);
+}
+
 export function toRoomSnapshot(room: Room, viewerParticipantId?: string): RoomSnapshot {
-  void viewerParticipantId;
+  const isDrawer = room.drawerId === viewerParticipantId;
 
   return {
     code: room.code,
     status: room.status,
+    hostId: room.hostId,
     participants: room.participants.map((participant) => ({ ...participant })),
     availableWords: listWords(),
-    roles: [...STARTER_ROLES]
+    roles: [...STARTER_ROLES],
+    secretWord: isDrawer ? room.secretWord : undefined,
+    isDrawer
   };
 }

@@ -1,0 +1,37 @@
+# Implementation Plan
+
+## Scenario 1 - Room Setup & Lobby (Complete)
+
+## Scenario 2 - Game Start & Drawer Flow
+
+### Discovery Notes
+- **Gaps identified:**
+  - `RoomStatus` only has `lobby`. Needs `playing`.
+  - `Room` model lacks `currentWord`, `drawerId`, and `round` info.
+  - `RoomSnapshot` doesn't filter `currentWord` based on the viewer's role.
+  - No `POST /rooms/:code/start` endpoint.
+- **Assumptions:**
+  - Deterministic word selection means taking the first word for the first round.
+
+### State Model Changes
+#### Backend
+- `backend/src/models/game.ts`:
+  - `RoomStatus`: Add `playing`.
+  - `Room`: Add `drawerId?: string`, `secretWord?: string`.
+  - `RoomSnapshot`: Add `secretWord?: string`, `isDrawer: boolean`.
+
+### Data Flow
+- **Start Game**: `POST /rooms/:code/start` (Host only) -> Backend sets status to `playing`, assigns `drawerId` (host), and picks `secretWord`.
+- **Sync**: All players polling `GET /rooms/:code` see status `playing` and redirect to `/game`.
+- **Word Visibility**: `toRoomSnapshot` only includes `secretWord` if `viewerParticipantId === room.drawerId`.
+
+### File-level Changes
+- `backend/src/models/game.ts`: Update types.
+- `backend/src/services/roomStore.ts`: Add `startGame` function.
+- `backend/src/api/rooms.ts`: Add `POST /:code/start` route.
+- `frontend/src/pages/LobbyPage.tsx`: Redirect when status is `playing`.
+- `frontend/src/pages/GamePage.tsx`: Display word for drawer, hide for others.
+
+### Risks
+- Ensuring all players redirect simultaneously (polling latency might cause slight delay).
+- Role assignment logic needs to be robust.
