@@ -20,9 +20,17 @@ export function LobbyPage() {
       return;
     }
 
+    if (room.status === "playing") {
+      navigate("/game", { replace: true });
+      return;
+    }
+
     const interval = setInterval(async () => {
       try {
-        await roomStore.fetchRoom();
+        const updatedRoom = await roomStore.fetchRoom();
+        if (updatedRoom?.status === "playing") {
+          navigate("/game", { replace: true });
+        }
       } catch (e) {
         console.error("Polling failed", e);
       }
@@ -37,6 +45,15 @@ export function LobbyPage() {
       await roomStore.fetchRoom();
     } catch (caughtError) {
       setRefreshError(caughtError instanceof Error ? caughtError.message : "Unable to refresh room");
+    }
+  }
+
+  async function handleStartGame() {
+    try {
+      await roomStore.startGame();
+      navigate("/game");
+    } catch (caughtError) {
+      setRefreshError(caughtError instanceof Error ? caughtError.message : "Unable to start game");
     }
   }
 
@@ -88,10 +105,10 @@ export function LobbyPage() {
         {isHost && (
           <button
             className="button button--primary"
-            disabled={!canStartGame}
-            onClick={() => navigate("/game")}
+            disabled={!canStartGame || isLoading}
+            onClick={handleStartGame}
           >
-            Start Game
+            {isLoading ? "Starting..." : "Start Game"}
           </button>
         )}
       </div>
